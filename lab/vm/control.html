@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCReAM · Linux bottleneck on this Mac</title>
+<style>body{font:15px system-ui;margin:20px;color:#172033}h1{font-size:24px}button{padding:8px;margin:4px}pre{white-space:pre-wrap;background:#f1f4f8;padding:12px}iframe{width:100%;height:820px;border:1px solid #ccd5e3}#summary{font-weight:600;line-height:1.7}.note{color:#50617b}table{border-collapse:collapse;margin:10px 0}td,th{border:1px solid #ccd5e3;padding:8px;text-align:left}</style>
+<h1>SCReAM video through a Linux bottleneck</h1>
+<p>Canary sender → rate limit + router queue → Canary receiver. Both browsers and the queue run in one Linux VM on this Mac.</p>
+<button data-action="dualpi2">DualPI2 / ECN</button><button data-action="fifo">FIFO baseline / no marking</button>
+<button data-action="1mbit">1 Mbit/s</button><button data-action="250kbit">250 kbit/s</button>
+<button data-action="compare">Compare FIFO vs DualPI2 (~1 minute)</button>
+<p id="message"></p><p id="summary">Waiting for measurements…</p>
+<p class="note">Blue/orange browser graphs show actual ECT(1)/CE counters. A comparison restarts the call for each queue at the same 1 Mbit/s capacity. Results describe this one video flow.</p>
+<div id="comparison"></div>
+<iframe title="Live Linux Canary sender and receiver" src="http://127.0.0.1:16080/vnc.html?autoconnect=1&amp;resize=scale&amp;path=websockify"></iframe>
+<details><summary>Queue and verification details</summary><pre id="details"></pre></details>
+<script>
+const token='__SESSION__';
+document.querySelectorAll('button').forEach(button=>button.onclick=async()=>{
+ const r=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json','X-Lab-Token':token},body:JSON.stringify({action:button.dataset.action})});
+ document.getElementById('message').textContent=r.ok?(await r.json()).message:await r.text();
+});
+function number(v){return Number.isFinite(v)?v.toFixed(1):'unavailable';}
+async function update(){try{
+ const data=await(await fetch('/api/state',{cache:'no-store'})).json();
+ const leaf=data.queue.find(q=>q.kind==='dualpi2'||q.kind==='pfifo');
+ const rx=data.rx?.summary.find(s=>s.direction==='inbound-rtp');
+ const tx=data.tx?.summary.find(s=>s.direction==='outbound-rtp');
+ const pair=data.tx?.summary.find(s=>s.selectedPair);
+ document.getElementById('summary').textContent=`Queue: ${leaf?.kind||'?'} · TX ${number(tx?.kbps)} kbit/s · RX ${number(rx?.kbps)} kbit/s · RTT ${number(pair?.rttMs)} ms · ECT(1) received ${rx?.packetsReceivedWithEct1??'unavailable'} · CE received ${rx?.packetsReceivedWithCe??'unavailable'}`;
+ document.getElementById('details').textContent=JSON.stringify({queue:data.queue,selectedPath:pair,progress:data.progress,runDirectory:data.run_dir},null,2);
+ if(data.comparing&&data.progress)document.getElementById('message').textContent=data.progress.message;
+ document.querySelectorAll('button').forEach(button=>button.disabled=data.comparing);
+ if(data.comparison){
+  const c=data.comparison;
+  document.getElementById('comparison').replaceChildren();
+  const table=document.createElement('table');
+  const rows=[['Measured result','FIFO','DualPI2'],['Median RTT (ms)',number(c.fifo.medianRttMs),number(c.dualpi2.medianRttMs)],['95th percentile RTT (ms)',number(c.fifo.p95RttMs),number(c.dualpi2.p95RttMs)],['Median received bitrate (kbit/s)',number(c.fifo.medianRxKbps),number(c.dualpi2.medianRxKbps)],['CE packets received',c.fifo.ceReceived,c.dualpi2.ceReceived],['SCReAM log reports CE',String(c.fifo.screamSawCe),String(c.dualpi2.screamSawCe)]];
+  rows.forEach((values,i)=>{const row=table.insertRow();values.forEach(value=>{const cell=document.createElement(i?'td':'th');cell.textContent=value;row.append(cell);});});
+  document.getElementById('comparison').append(table);
+ }
+}catch(error){document.getElementById('message').textContent=String(error);}}
+setInterval(update,1500);update();
+</script></html>

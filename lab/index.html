@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCReAM single-computer WebRTC lab</title>
+<style>
+body{font:16px system-ui,sans-serif;max-width:960px;margin:32px auto;padding:0 20px;color:#172033}
+video{width:352px;max-width:100%;background:#121826}textarea{width:100%;height:130px;font:12px monospace;box-sizing:border-box}
+button{padding:9px 12px;margin:5px 4px 5px 0}pre{white-space:pre-wrap;background:#f1f4f8;padding:12px;overflow-wrap:anywhere}
+small{display:block;margin:10px 0}#status{font-weight:600}
+.banner{padding:12px;background:#fff2ce;border-radius:8px}.flow{padding:12px;background:#e9f2ff;border-radius:8px;line-height:1.8}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}.charts figure{margin:0;background:#f1f4f8;padding:10px;border-radius:8px}
+.charts svg{display:block;width:100%;height:auto}.charts figcaption{font-size:13px;font-weight:600}.readouts{font-size:14px;line-height:1.8}
+.ecn{margin:16px 0;padding:14px;border:1px solid #d6dfec;border-radius:8px}.ecn h2{font-size:17px;margin:0 0 12px}
+.ecn-cards{display:flex;gap:24px;flex-wrap:wrap}.ecn-cards strong{display:block;font-size:28px}.ecn-cards span{font-size:13px}
+.ecn-ect{color:#176ad3}.ecn-ce{color:#b64f04}.ecn p{font-size:13px;margin-bottom:0}.ecn svg{display:block;max-width:480px;width:100%;height:auto}
+@media(max-width:600px){.charts{grid-template-columns:1fr}}
+</style>
+<h1>SCReAM WebRTC lab</h1>
+<p id="mode" class="banner">Linux experiment: verify the selected candidate pair and DualPI2 queue before interpreting L4S results.</p>
+<p class="flow" id="flow">Y4M file → Sender / VP9 → Linux bottleneck → Receiver / video<br>Receiver → RTCP feedback → Sender / SCReAM</p>
+<p id="status">Ready</p>
+<p id="instructions">TX creates an offer. RX pastes the offer and creates an answer. TX pastes the answer and applies it. Exchange the complete JSON after ICE gathering finishes.</p>
+<button id="offer">TX: create offer</button>
+<button id="answer">RX: answer pasted offer</button>
+<button id="apply">TX: apply pasted answer</button>
+<button id="save">Download stats and SDP</button>
+<button id="stop">Stop</button>
+<p><video id="preview" aria-label="Sender camera preview" autoplay muted playsinline></video> <video id="received" aria-label="Video received over WebRTC" autoplay playsinline controls></video></p>
+<section class="ecn" aria-label="Measured ECN marks">
+<h2>ECN marks · actual RTP packet counters</h2>
+<div class="ecn-cards">
+<div class="ecn-ect"><span id="ect1-label">ECT(1) packets</span><strong id="ect1-count">—</strong></div>
+<div class="ecn-ce"><span>CE packets received</span><strong id="ce-count">—</strong></div>
+<div><span>CE share of ECT(1) + CE received</span><strong id="ce-share">—</strong></div>
+</div>
+<p>Blue: ECT(1) · Orange: CE · packets per sampling interval (about 1 second)</p>
+<svg id="ecn-plot" viewBox="0 0 400 145" role="img" aria-label="Measured ECT1 and CE packet increments over time"></svg>
+<p id="ecn-status">Waiting for ECN telemetry. Missing counters are shown as unavailable.</p>
+</section>
+<div class="charts">
+<figure><figcaption>Video bitrate · kbit/s · last 60 samples</figcaption><svg id="bitrate-plot" viewBox="0 0 400 145" role="img" aria-label="Measured video bitrate over time"></svg></figure>
+<figure><figcaption>Network RTT · ms · last 60 samples</figcaption><svg id="rtt-plot" viewBox="0 0 400 145" role="img" aria-label="Measured candidate pair round trip time over time"></svg></figure>
+</div>
+<p id="readouts" class="readouts">Waiting for measured statistics…</p>
+<div id="signaling">
+<label for="outgoing">Local description — copy everything to the other browser</label>
+<textarea id="outgoing" readonly></textarea>
+<label for="incoming">Remote description — paste the other browser's JSON here</label>
+<textarea id="incoming"></textarea>
+</div>
+<small>Video only; VP9; no STUN/TURN; no media passes through this HTTP server. Reload both pages to start a new session.</small>
+<details><summary>Detailed statistics</summary><pre id="stats">No samples yet.</pre></details>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</html>

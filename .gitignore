@@ -1,0 +1,12 @@
+media/
+runs/
+profiles/
+chrome-canary.deb
+.DS_Store
+__pycache__/
+*.py[cod]
+*.log
+.env
+.env.*
+SCREAM-CANARY-LAB.zip
+SCREAM-CANARY-GUIDE.docx
